@@ -1,0 +1,160 @@
+
+service: product-api # NOTE: update this with your service name
+
+# You can pin your service to only deploy with a specific Serverless version
+# Check out our docs for more details
+# frameworkVersion: "=X.X.X"
+
+provider:
+  name: aws
+  runtime: java8
+
+plugins:
+  - serverless-aws-documentation
+
+package:
+  artifact: target/product-api-dev.jar
+
+custom:
+  documentation:
+    info:
+      version: "3.0" # see note above about this being ignored
+      title: "Product API" # see note above about this being ignored
+      description: "This is the best API ever"
+      termsOfService: "http://www.example.com/terms-of-service"
+      contact:
+        name: "John Smith"
+        url: "http://www.example.com/me"
+        email: "js@example.com"
+      license:
+        name: "Licensing"
+        url: "http://www.example.com/licensing"
+      resources:
+        - path: "product/all"
+          description: "List all products"
+    models:
+      - name: "Product"
+        description: "This is an product"
+        contentType: "application/json"
+        schema: ${file(models/product.json)}
+#          type: "object"
+#          properties:
+#            id:
+#              type: "integer"
+#            name:
+#              type: "string"
+#            value:
+#              type: "number"
+#            description:
+#              type: "string"
+
+
+
+functions:
+#  readProduct:
+#    handler: com.com.serverless.requests.ReadProduct
+#    role: arn:aws:iam::423672971386:role/DBA
+#    environment:
+#      TABLE_NAME: Products
+#    events:
+#      - http:
+#          path: product
+#          method: GET
+#          integration: lambda
+#          request:
+#            parameters:
+#              querystrings:
+#                id: true
+#            template:
+#              application/json: '{"id":"$input.params(''id'')"}'
+
+  listProducts:
+    role: arn:aws:iam::423672971386:role/DBA
+    handler: com.com.serverless.requests.ListProducts
+    environment:
+      TABLE_NAME: Products
+    events:
+      - http:
+          path: product/all
+          method: get
+          integration: lambda-proxy
+
+          documentation:
+            summary: "List all products"
+            description: "List all products"
+            tags:
+              - "Data Creation"
+              - "Some other tag"
+            requestHeaders:
+              - name: "x-header"
+                description: "Header description"
+            methodResponses:
+              - statusCode: "200"
+                responseModels:
+                  "application/json": "Product"
+
+
+#  updateProduct:
+#    handler: com.com.serverless.requests.UpdateProduct
+#    role: arn:aws:iam::423672971386:role/DBA
+#    environment:
+#      TABLE_NAME: Products
+#    events:
+#      - http:
+#          path: product
+#          method: put
+#          integration: lambda
+#          request:
+#            template:
+#              application/json:
+#                '{
+#                    "product":
+#                      {
+#                        "id": "$input.body.id",
+#                        "name": "$input.body.name",
+#                        "value": "$input.body.value",
+#                        "description": "$input.body.description"
+#                      }
+#                  }'
+
+#  deleteProduct:
+#    role: arn:aws:iam::423672971386:role/DBA
+#    handler: com.com.serverless.requests.DeleteProduct
+#    environment:
+#      TABLE_NAME: Products
+#    events:
+#      - http:
+#          path: product/{id}
+#          method: delete
+#          integration: lambda-proxy
+#
+#  saveProduct:
+#    role: arn:aws:iam::423672971386:role/DBA
+#    handler: com.com.serverless.requests.SaveProduct
+#    environment:
+#      TABLE_NAME: Products
+#    events:
+#      - http:
+#          path: product
+#          method: post
+#          integration: lambda-proxy
+
+resources:
+  Resources:
+    ProductTable:
+      Type: 'AWS::DynamoDB::Table'
+      Properties:
+        TableName: Products
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: N
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+
+#    ApiGateway:
+#      Properties:
+#        Body:

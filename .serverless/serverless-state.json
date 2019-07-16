@@ -1,0 +1,466 @@
+{
+  "service": {
+    "service": "product-api",
+    "serviceObject": {
+      "name": "product-api"
+    },
+    "provider": {
+      "stage": "dev",
+      "region": "us-east-1",
+      "variableSyntax": "\\${([ ~:a-zA-Z0-9._@'\",\\-\\/\\(\\)*]+?)}",
+      "name": "aws",
+      "runtime": "java8",
+      "versionFunctions": true,
+      "remoteFunctionData": null,
+      "compiledCloudFormationTemplate": {
+        "AWSTemplateFormatVersion": "2010-09-09",
+        "Description": "The AWS CloudFormation template for this Serverless application",
+        "Resources": {
+          "ServerlessDeploymentBucket": {
+            "Type": "AWS::S3::Bucket",
+            "Properties": {
+              "BucketEncryption": {
+                "ServerSideEncryptionConfiguration": [
+                  {
+                    "ServerSideEncryptionByDefault": {
+                      "SSEAlgorithm": "AES256"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "ListProductsLogGroup": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+              "LogGroupName": "/aws/lambda/product-api-dev-listProducts"
+            }
+          },
+          "ListProductsLambdaFunction": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+              "Code": {
+                "S3Bucket": {
+                  "Ref": "ServerlessDeploymentBucket"
+                },
+                "S3Key": "serverless/product-api/dev/1563301928918-2019-07-16T18:32:08.918Z/product-api-dev.jar"
+              },
+              "FunctionName": "product-api-dev-listProducts",
+              "Handler": "com.com.serverless.requests.ListProducts",
+              "MemorySize": 1024,
+              "Role": "arn:aws:iam::423672971386:role/DBA",
+              "Runtime": "java8",
+              "Timeout": 6,
+              "Environment": {
+                "Variables": {
+                  "TABLE_NAME": "Products"
+                }
+              }
+            },
+            "DependsOn": [
+              "ListProductsLogGroup"
+            ]
+          },
+          "ListProductsLambdaVersion29fV9hLWV6MSyvY0VJDNWFJp7L7sHw7EWJAJU7QELc": {
+            "Type": "AWS::Lambda::Version",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+              "FunctionName": {
+                "Ref": "ListProductsLambdaFunction"
+              },
+              "CodeSha256": "QkwDjdArEnqfR/HtsFXVaP0qdZ1cn0FOjLaiACiLwVY="
+            }
+          },
+          "ApiGatewayRestApi": {
+            "Type": "AWS::ApiGateway::RestApi",
+            "Properties": {
+              "Name": "dev-product-api",
+              "EndpointConfiguration": {
+                "Types": [
+                  "EDGE"
+                ]
+              }
+            }
+          },
+          "ApiGatewayResourceProduct": {
+            "Type": "AWS::ApiGateway::Resource",
+            "Properties": {
+              "ParentId": {
+                "Fn::GetAtt": [
+                  "ApiGatewayRestApi",
+                  "RootResourceId"
+                ]
+              },
+              "PathPart": "product",
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              }
+            }
+          },
+          "ApiGatewayResourceProductAll": {
+            "Type": "AWS::ApiGateway::Resource",
+            "Properties": {
+              "ParentId": {
+                "Ref": "ApiGatewayResourceProduct"
+              },
+              "PathPart": "all",
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              }
+            }
+          },
+          "ApiGatewayMethodProductAllGet": {
+            "Type": "AWS::ApiGateway::Method",
+            "Properties": {
+              "HttpMethod": "GET",
+              "RequestParameters": {
+                "method.request.header.x-header": false
+              },
+              "ResourceId": {
+                "Ref": "ApiGatewayResourceProductAll"
+              },
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              },
+              "ApiKeyRequired": false,
+              "AuthorizationType": "NONE",
+              "Integration": {
+                "IntegrationHttpMethod": "POST",
+                "Type": "AWS_PROXY",
+                "Uri": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":apigateway:",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      ":lambda:path/2015-03-31/functions/",
+                      {
+                        "Fn::GetAtt": [
+                          "ListProductsLambdaFunction",
+                          "Arn"
+                        ]
+                      },
+                      "/invocations"
+                    ]
+                  ]
+                }
+              },
+              "MethodResponses": [
+                {
+                  "StatusCode": "200",
+                  "ResponseModels": {
+                    "application/json": "Product"
+                  }
+                }
+              ]
+            },
+            "DependsOn": [
+              "ProductModel"
+            ]
+          },
+          "ApiGatewayDeployment1563301928569": {
+            "Type": "AWS::ApiGateway::Deployment",
+            "Properties": {
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              },
+              "StageName": "dev"
+            },
+            "DependsOn": [
+              "ApiGatewayMethodProductAllGet"
+            ]
+          },
+          "ListProductsLambdaPermissionApiGateway": {
+            "Type": "AWS::Lambda::Permission",
+            "Properties": {
+              "FunctionName": {
+                "Fn::GetAtt": [
+                  "ListProductsLambdaFunction",
+                  "Arn"
+                ]
+              },
+              "Action": "lambda:InvokeFunction",
+              "Principal": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "apigateway.",
+                    {
+                      "Ref": "AWS::URLSuffix"
+                    }
+                  ]
+                ]
+              },
+              "SourceArn": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition"
+                    },
+                    ":execute-api:",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId"
+                    },
+                    ":",
+                    {
+                      "Ref": "ApiGatewayRestApi"
+                    },
+                    "/*/*"
+                  ]
+                ]
+              }
+            }
+          },
+          "ProductModel": {
+            "Type": "AWS::ApiGateway::Model",
+            "Properties": {
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              },
+              "ContentType": "application/json",
+              "Name": "Product",
+              "Schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "number"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "number"
+                  },
+                  "description": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "ProductTable": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+              "TableName": "Products",
+              "AttributeDefinitions": [
+                {
+                  "AttributeName": "id",
+                  "AttributeType": "N"
+                }
+              ],
+              "KeySchema": [
+                {
+                  "AttributeName": "id",
+                  "KeyType": "HASH"
+                }
+              ],
+              "ProvisionedThroughput": {
+                "ReadCapacityUnits": 5,
+                "WriteCapacityUnits": 5
+              }
+            }
+          }
+        },
+        "Outputs": {
+          "ServerlessDeploymentBucketName": {
+            "Value": {
+              "Ref": "ServerlessDeploymentBucket"
+            }
+          },
+          "ListProductsLambdaFunctionQualifiedArn": {
+            "Description": "Current Lambda function version",
+            "Value": {
+              "Ref": "ListProductsLambdaVersion29fV9hLWV6MSyvY0VJDNWFJp7L7sHw7EWJAJU7QELc"
+            }
+          },
+          "ServiceEndpoint": {
+            "Description": "URL of the service endpoint",
+            "Value": {
+              "Fn::Join": [
+                "",
+                [
+                  "https://",
+                  {
+                    "Ref": "ApiGatewayRestApi"
+                  },
+                  ".execute-api.",
+                  {
+                    "Ref": "AWS::Region"
+                  },
+                  ".",
+                  {
+                    "Ref": "AWS::URLSuffix"
+                  },
+                  "/dev"
+                ]
+              ]
+            }
+          },
+          "AwsDocApiId": {
+            "Description": "API ID",
+            "Value": {
+              "$ref": "$[\"service\"][\"provider\"][\"compiledCloudFormationTemplate\"][\"Resources\"][\"ProductModel\"][\"Properties\"][\"RestApiId\"]"
+            }
+          }
+        }
+      },
+      "coreCloudFormationTemplate": {
+        "AWSTemplateFormatVersion": "2010-09-09",
+        "Description": "The AWS CloudFormation template for this Serverless application",
+        "Resources": {
+          "ServerlessDeploymentBucket": {
+            "Type": "AWS::S3::Bucket",
+            "Properties": {
+              "BucketEncryption": {
+                "ServerSideEncryptionConfiguration": [
+                  {
+                    "ServerSideEncryptionByDefault": {
+                      "SSEAlgorithm": "AES256"
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "Outputs": {
+          "ServerlessDeploymentBucketName": {
+            "Value": {
+              "Ref": "ServerlessDeploymentBucket"
+            }
+          }
+        }
+      },
+      "vpc": {}
+    },
+    "custom": {
+      "documentation": {
+        "info": {
+          "version": "3.0",
+          "title": "Product API",
+          "description": "This is the best API ever",
+          "termsOfService": "http://www.example.com/terms-of-service",
+          "contact": {
+            "name": "John Smith",
+            "url": "http://www.example.com/me",
+            "email": "js@example.com"
+          },
+          "license": {
+            "name": "Licensing",
+            "url": "http://www.example.com/licensing"
+          },
+          "resources": [
+            {
+              "path": "product/all",
+              "description": "List all products"
+            }
+          ]
+        },
+        "models": [
+          {
+            "name": "Product",
+            "description": "This is an product",
+            "contentType": "application/json",
+            "schema": {
+              "$ref": "$[\"service\"][\"provider\"][\"compiledCloudFormationTemplate\"][\"Resources\"][\"ProductModel\"][\"Properties\"][\"Schema\"]"
+            }
+          }
+        ]
+      }
+    },
+    "plugins": [
+      "serverless-aws-documentation"
+    ],
+    "pluginsData": {},
+    "functions": {
+      "listProducts": {
+        "role": "arn:aws:iam::423672971386:role/DBA",
+        "handler": "com.com.serverless.requests.ListProducts",
+        "environment": {
+          "TABLE_NAME": "Products"
+        },
+        "events": [
+          {
+            "http": {
+              "path": "product/all",
+              "method": "get",
+              "integration": "AWS_PROXY",
+              "documentation": {
+                "summary": "List all products",
+                "description": "List all products",
+                "tags": [
+                  "Data Creation",
+                  "Some other tag"
+                ],
+                "requestHeaders": [
+                  {
+                    "name": "x-header",
+                    "description": "Header description"
+                  }
+                ],
+                "methodResponses": [
+                  {
+                    "statusCode": "200",
+                    "responseModels": {
+                      "$ref": "$[\"service\"][\"provider\"][\"compiledCloudFormationTemplate\"][\"Resources\"][\"ApiGatewayMethodProductAllGet\"][\"Properties\"][\"MethodResponses\"][0][\"ResponseModels\"]"
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "name": "product-api-dev-listProducts",
+        "package": {},
+        "memory": 1024,
+        "timeout": 6,
+        "runtime": "java8",
+        "vpc": {}
+      }
+    },
+    "resources": {
+      "Resources": {
+        "ProductTable": {
+          "Type": "AWS::DynamoDB::Table",
+          "Properties": {
+            "TableName": "Products",
+            "AttributeDefinitions": [
+              {
+                "AttributeName": "id",
+                "AttributeType": "N"
+              }
+            ],
+            "KeySchema": [
+              {
+                "AttributeName": "id",
+                "KeyType": "HASH"
+              }
+            ],
+            "ProvisionedThroughput": {
+              "ReadCapacityUnits": 5,
+              "WriteCapacityUnits": 5
+            }
+          }
+        }
+      },
+      "Outputs": {}
+    },
+    "layers": {}
+  },
+  "package": {
+    "artifactDirectoryName": "serverless/product-api/dev/1563301928918-2019-07-16T18:32:08.918Z",
+    "artifact": "product-api-dev.jar"
+  }
+}
